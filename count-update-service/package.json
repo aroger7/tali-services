@@ -1,0 +1,27 @@
+{
+  "name": "count-update-service",
+  "version": "1.0.0",
+  "description": "Service for updating Tally player counts",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adam Rogers",
+  "license": "ISC",
+  "dependencies": {
+    "@middy/core": "^1.4.0",
+    "@middy/http-cors": "^1.4.0",
+    "@middy/secrets-manager": "^1.4.0",
+    "apollo-server-lambda": "^2.19.0",
+    "async-retry": "^1.3.1",
+    "aws-sdk": "^2.799.0",
+    "axios": "^0.19.2",
+    "date-fns": "^2.16.1",
+    "express": "^4.17.1",
+    "serverless-http": "^2.6.0"
+  },
+  "devDependencies": {
+    "serverless-latest-layer-version": "^2.1.1",
+    "serverless-offline": "^6.8.0"
+  }
+}
