@@ -5,3 +5,5 @@ jspm_packages
 # Serverless directories
 .serverless
 .serverless-offline
+
+**/config/local.js

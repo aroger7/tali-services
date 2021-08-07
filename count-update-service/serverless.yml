@@ -50,3 +50,13 @@ functions:
     name: ${self:provider.stage}-get-batch-counts-function
     timeout: 120
     memorySize: 256
+
+  updateAppStatsFunction:
+    handler: ./update-app-stats-function/index.handler
+    name: ${self:provider.stage}-update-app-stats-function
+    memorySize: 128
+    timeout: 360
+    environment:
+      ORM_LAYER_PATH: /opt/db
+    layers:
+      - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${opt:stage, 'dev'}-orm-layer:latest
