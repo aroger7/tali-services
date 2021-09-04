@@ -15,9 +15,7 @@ const updateMonthlyStats = require('./updateMonthlyStats');
 const updateYearlyStats = require('./updateYearlyStats');
 const updateAllTimeStats = require('./updateAllTimeStats');
 
-const initDb = require(!process.env.IS_OFFLINE
-  ? process.env.ORM_LAYER_PATH
-  : '../../../layers/orm-layer/nodejs/db');
+const initDb = require(config.ORM_LAYER_PATH);
 let db = null;
 
 AWS.config.update({ region: 'us-east-1' });
@@ -26,9 +24,18 @@ const updateTime = startOfHour(new Date());
 
 // Increase the max sockets so Lambda will fulfill more requests in parallel
 const agentConfig = { maxSocket: 1000 };
-const agent = process.env.IS_OFFLINE 
+const agent = process.env.IS_OFFLINE || process.env.IS_LOCAL
   ? new http.Agent(agentConfig)
   : new https.Agent(agentConfig);
+
+const lambdaConfig = { httpOptions: { agent } };
+if (process.env.IS_OFFLINE || process.env.IS_LOCAL) {
+  console.log('running offline');
+  lambdaConfig.endpoint = new AWS.Endpoint(config.AWS_LAMBDA_ENDPOINT);
+  lambdaConfig.region = 'us-east-1';
+}
+
+const lambda = new AWS.Lambda(lambdaConfig);
 
 const getAppList = async () => {
   try {
@@ -65,25 +72,15 @@ const getPlayerCounts = (apps) => {
     throw new Error('Something is undefined');
   }
 
-  const lambdaConfig = { httpOptions: { agent } };
-  if (process.env.IS_OFFLINE) {
-    console.log('running offline');
-    lambdaConfig.endpoint = new AWS.Endpoint('http://localhost:3002');
-    lambdaConfig.region = 'us-east-1';
-  }
-
-  const lambda = new AWS.Lambda(lambdaConfig);
-  console.log(appGroups.length);
   return Promise.all(appGroups
     .map(appGroup => {
-      return lambda.invoke({
-        FunctionName: config.GET_PLAYER_COUNTS_FUNCTION_NAME,
-        Payload: JSON.stringify({ 
+      return invokeLambda({
+        functionName: config.GET_PLAYER_COUNTS_FUNCTION_NAME,
+        payload: { 
           apps: appGroup,
           reqsPerSecond: config.REQS_PER_SECOND_MAX
-        })
+        }
       })
-      .promise()
     }
   ))
     .then((responses) => {
@@ -158,6 +155,14 @@ const updateDatabaseCounts = async (playerCounts) => {
   }
 };
 
+const invokeLambda = async ({ functionName, payload, invocationType }) => {
+  return await lambda.invoke({
+    FunctionName: functionName,
+    Payload: JSON.stringify(payload),
+    InvocationType: invocationType
+  }).promise();
+}
+
 const start = async (event, context) => {
   const startTime = Date.now();
   try {
@@ -168,17 +173,17 @@ const start = async (event, context) => {
     } = context.DB_CREDENTIALS || {};
     db = await initDb('postgres', username, password, { host });
 
-    const appList = await getAppList();
+    const appList = (await getAppList()).slice(0, 20000);
     const playerCounts = await runUpdate(appList);
     await updateDatabaseCounts(playerCounts);
-    await updateDailyStats(db);
-    await updateMonthlyStats(db);
-    await updateYearlyStats(db);
-    await updateAllTimeStats(db);
-    console.log(`done in ${Date.now() - startTime}ms`);
+    await invokeLambda({
+      functionName: 'dev-update-app-stats-function',
+      invocationType: 'Event'
+    });
+
+    console.info(`done in ${Date.now() - startTime}ms`);
   } catch (e) {
-    console.log(e);
-    console.log(e.message);
+    console.error(e);
   } finally {
     db.sequelize.close();
     return { statusCode: '200' };
