@@ -26,6 +26,7 @@ functions:
     timeout: 360
     environment:
       ORM_LAYER_PATH: /opt/db
+      DB_SECRET_NAME: TallyDbDevCredentialsSecret
     layers:
       - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${opt:stage, 'dev'}-orm-layer:latest
     events:
@@ -58,5 +59,6 @@ functions:
     timeout: 360
     environment:
       ORM_LAYER_PATH: /opt/db
+      DB_SECRET_NAME: TallyDbDevCredentialsSecret
     layers:
       - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${opt:stage, 'dev'}-orm-layer:latest
