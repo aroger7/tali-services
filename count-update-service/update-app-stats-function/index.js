@@ -9,26 +9,28 @@ const updateMonthlyStats = require('./updateMonthlyStats');
 const updateYearlyStats = require('./updateYearlyStats');
 
 const initDb = require(config.ORM_LAYER_PATH);
+let db = null;
 
 const start = async (event, context) => {
+  let sequelize = null;
   try {
     const { 
       host = 'localhost', 
       username = 'postgres', 
       password = 'password12345' 
     } = context.DB_CREDENTIALS || {};
-    const { sequelize } = await initDb('postgres', username, password, { host });
+    db = await initDb('postgres', username, password, { host });
+    sequelize = db?.sequelize;
 
-    console.log("daily");
     await updateDailyStats(sequelize);
-    console.log("monthly");
     await updateMonthlyStats(sequelize);
-    console.log("yearly");
     await updateYearlyStats(sequelize);
-    console.log("all time");
     await updateAllTimeStats(sequelize);
   } catch (err) {
     console.error(err);
+  } finally {
+    sequelize?.close();
+    return { statusCode: '200' };
   }
 }
 
