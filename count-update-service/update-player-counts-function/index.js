@@ -166,6 +166,7 @@ const invokeLambda = async ({ functionName, payload, invocationType }) => {
 const start = async (event, context) => {
   const startTime = Date.now();
   try {
+    console.log("connecting to db");
     const { 
       host = 'localhost', 
       username = 'postgres', 
@@ -173,8 +174,10 @@ const start = async (event, context) => {
     } = context.DB_CREDENTIALS || {};
     db = await initDb('postgres', username, password, { host });
 
-    const appList = (await getAppList()).slice(0, 20000);
+    const appList = await getAppList();
+    console.log("got app list");
     const playerCounts = await runUpdate(appList);
+    console.log("got player counts");
     await updateDatabaseCounts(playerCounts);
     await invokeLambda({
       functionName: 'dev-update-app-stats-function',
