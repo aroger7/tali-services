@@ -6,10 +6,8 @@ Amplify Params - DO NOT EDIT */
 const axios = require('axios');
 
 module.exports.handler = (event, context, callback) => {
-  console.log(`reqs per second: ${event.reqsPerSecond}`)
   const { apps, reqsPerSecond = 20 } = event;
   const queued = apps.concat();
-  console.log('queued: ', queued.length);
   const inProgress = [];
   const completed = [];
   const intervalId = setInterval(() => {
@@ -32,7 +30,7 @@ module.exports.handler = (event, context, callback) => {
             completed.push({ ...app, count });
           })
           .catch((err) => {
-            console.log(`Couldn't get ${app.appid} player count: ${err.message}`);
+            console.error(`Couldn't get ${app.appid} player count: ${err.message}`);
             inProgress.splice(inProgress.findIndex(ip => ip.appid === app.appid), 1)
             completed.push({ ...app, error: err, errorStatus: err.response.status });
           })
