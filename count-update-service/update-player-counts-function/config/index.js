@@ -1,12 +1,9 @@
-const local = require('./local.js');
-const development = require('./development.js');
-
 const getConfig = () => {
   if (process.env.IS_OFFLINE || process.env.IS_LOCAL) {
-    return local;
+    return require('./local.js');
   }
 
-  return development;
+  return require('./development.js');
 }
 
 module.exports = getConfig();
