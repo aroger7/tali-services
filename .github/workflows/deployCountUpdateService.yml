@@ -1,0 +1,24 @@
+name: Deploy count update service
+on:
+  push:
+    branches:
+      - master
+      - dev
+    paths:
+      - 'count-update-service/**'
+  workflow_dispatch:
+defaults:
+  run:
+    working-directory: count-update-service
+env:
+  SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+jobs:
+  deploy:
+    name: Deploy count update service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      - uses: nelonoel/branch-name@v1.0.1
+      - run: npm ci
+      - run: npx serverless deploy --stage ${{ env.BRANCH_NAME }}
