@@ -17,11 +17,10 @@
     "aws-sdk": "^2.799.0",
     "axios": "^0.19.2",
     "date-fns": "^2.16.1",
-    "express": "^4.17.1",
-    "serverless-http": "^2.6.0"
+    "express": "^4.17.1"
   },
   "devDependencies": {
     "serverless-latest-layer-version": "^2.1.1",
-    "serverless-offline": "^6.8.0"
+    "serverless-offline": "^8.0.0"
   }
 }

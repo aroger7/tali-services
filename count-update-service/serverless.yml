@@ -21,7 +21,7 @@ provider:
 functions:
   updatePlayerCounts:
     handler: ./update-player-counts-function/index.handler
-    name: ${self:provider.stage}-update-player-counts-function
+    name: ${sls:stage}-update-player-counts-function
     memorySize: 512
     timeout: 360
     environment:
@@ -29,37 +29,27 @@ functions:
       DB_SECRET_NAME: TallyDbDevCredentialsSecret
       GET_PLAYER_COUNTS_FUNCTION_NAME: dev-update-app-stats-function
     layers:
-      - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${opt:stage, 'dev'}-orm-layer:latest
+      - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${sls:stage}-orm-layer:latest
     events:
       - schedule:
           rate: cron(0 0/1 * * ? *)
           # Disable for now since dev is only functional env
           # TODO: Re-enable once prod/staging are up, exclusively for those
           enabled: false
-  
-  mockSteamApi:
-    handler: ./mock-steam-api/index.handler
-    events:
-      - http:
-          path: /{path}
-          method: GET
-          cors: true
-          private: false
-    name: ${self:provider.stage}-mock-steam-api
 
   getBatchCounts:
     handler: ./get-batch-counts-function/index.handler
-    name: ${self:provider.stage}-get-batch-counts-function
+    name: ${sls:stage}-get-batch-counts-function
     timeout: 120
     memorySize: 256
 
   updateAppStatsFunction:
     handler: ./update-app-stats-function/index.handler
-    name: ${self:provider.stage}-update-app-stats-function
+    name: ${sls:stage}-update-app-stats-function
     memorySize: 128
     timeout: 360
     environment:
       ORM_LAYER_PATH: /opt/db
       DB_SECRET_NAME: TallyDbDevCredentialsSecret
     layers:
-      - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${opt:stage, 'dev'}-orm-layer:latest
+      - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${sls:stage}-orm-layer:latest
