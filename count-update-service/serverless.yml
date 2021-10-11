@@ -10,7 +10,7 @@ frameworkVersion: '2'
 
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs14.x
   iamRoleStatements:
     - Effect: 'Allow'
       Action:
@@ -27,21 +27,22 @@ functions:
     environment:
       ORM_LAYER_PATH: /opt/db
       DB_SECRET_NAME: TallyDbDevCredentialsSecret
-      GET_PLAYER_COUNTS_FUNCTION_NAME: dev-update-app-stats-function
+      GET_PLAYER_COUNTS_FUNCTION_NAME: dev-get-batch-counts-function
     layers:
       - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${sls:stage}-orm-layer:latest
-    events:
-      - schedule:
-          rate: cron(0 0/1 * * ? *)
-          # Disable for now since dev is only functional env
-          # TODO: Re-enable once prod/staging are up, exclusively for those
-          enabled: false
+    # Disable for now since dev is only functional env
+    # TODO: Re-enable once prod/staging are up, exclusively for those
+    # events:
+    #   - schedule:
+    #       rate: cron(0 0/1 * * ? *)
+          
+    #       enabled: false
 
   getBatchCounts:
     handler: ./get-batch-counts-function/index.handler
     name: ${sls:stage}-get-batch-counts-function
     timeout: 120
-    memorySize: 256
+    memorySize: 128
 
   updateAppStatsFunction:
     handler: ./update-app-stats-function/index.handler
