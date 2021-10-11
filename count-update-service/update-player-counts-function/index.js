@@ -10,10 +10,6 @@ const { startOfHour } = require('date-fns');
 
 const insertApps = require('./insertApps');
 const insertCounts = require('./insertCounts');
-const updateDailyStats = require('./updateDailyStats');
-const updateMonthlyStats = require('./updateMonthlyStats');
-const updateYearlyStats = require('./updateYearlyStats');
-const updateAllTimeStats = require('./updateAllTimeStats');
 
 const initDb = require(config.ORM_LAYER_PATH);
 let db = null;
@@ -58,7 +54,7 @@ const getAppList = async () => {
   }
 };
 
-const getPlayerCounts = (apps) => {
+const getPlayerCounts = async (apps) => {
   const groupSize = Math.ceil(apps.length / config.NUM_UPDATE_LAMBDAS);
   let appGroups = [...Array(config.NUM_UPDATE_LAMBDAS)]
   appGroups = appGroups
@@ -72,48 +68,44 @@ const getPlayerCounts = (apps) => {
     throw new Error('Something is undefined');
   }
 
-  return Promise.all(appGroups
-    .map(appGroup => {
-      return invokeLambda({
-        functionName: config.GET_PLAYER_COUNTS_FUNCTION_NAME,
-        payload: { 
-          apps: appGroup,
-          reqsPerSecond: config.REQS_PER_SECOND_MAX
-        }
-      })
-    }
-  ))
-    .then((responses) => {
-      responses.map(response => JSON.parse(response.Payload))
-        .forEach(payload => {
-          if (payload) {
-            const body = JSON.parse(payload.body);
-            appCounts.push(...body.playerCounts.filter(count => !count.error));
-            body.playerCounts
-              .filter(count => Boolean(count.error && count.errorStatus))
-              .forEach(count => {
-                const status = count.errorStatus;
-                errorsByCode[status] = errorsByCode[status] 
-                  ? errorsByCode[status].concat(count) 
-                  : [count];
-                errorsByCode.count++;
-              });
-          }
-        });
-
-      console.log(`total count: ${appCounts.length + errorsByCode.count}`);
-      console.log(`total error count: ${errorsByCode.count}`);
-      Object.keys(errorsByCode)
-        .filter(key => key !== 'count')
-        .forEach(key => {
-          console.log(`total ${key} error count: ${errorsByCode[key].length}`)
-        });
-
-      return { apps: appCounts, errorsByCode };
+  const responses = await Promise.all(appGroups.map((appGroup) => 
+    invokeLambda({
+      functionName: config.GET_PLAYER_COUNTS_FUNCTION_NAME,
+      payload: { 
+        apps: appGroup,
+        reqsPerSecond: config.REQS_PER_SECOND_MAX
+      }
     })
-    .catch((err) => {
-      console.log(err);
+  ));
+
+  responses.forEach(response => {
+      const payload = JSON.parse(response.Payload);
+      if (payload && payload.body) {
+        const body = JSON.parse(payload.body);
+        appCounts.push(...body.playerCounts.filter(count => !count.error));
+        body.playerCounts
+          .filter(count => Boolean(count.error && count.errorStatus))
+          .forEach(count => {
+            const status = count.errorStatus;
+            errorsByCode[status] = errorsByCode[status] 
+              ? errorsByCode[status].concat(count) 
+              : [count];
+            errorsByCode.count++;
+          });
+      } else {
+        console.error('error response: ', response);
+      }
     });
+
+  console.log(`total count: ${appCounts.length + errorsByCode.count}`);
+  console.log(`total error count: ${errorsByCode.count}`);
+  Object.keys(errorsByCode)
+    .filter(key => key !== 'count')
+    .forEach(key => {
+      console.log(`total ${key} error count: ${errorsByCode[key].length}`)
+    });
+
+  return { apps: appCounts, errorsByCode };
 };
 
 const runUpdate = async (appList, retries = 10) => {
@@ -150,13 +142,13 @@ const updateDatabaseCounts = async (playerCounts) => {
     await insertApps(db, newApps);
     await insertCounts(db, newCounts);
   } catch(err) {
-    console.log('could not update apps and counts!');
+    console.log('could not update apps and counts!', err);
     throw err;
   }
 };
 
-const invokeLambda = async ({ functionName, payload, invocationType }) => {
-  return await lambda.invoke({
+const invokeLambda = ({ functionName, payload, invocationType = "RequestResponse" }) => {
+  return lambda.invoke({
     FunctionName: functionName,
     Payload: JSON.stringify(payload),
     InvocationType: invocationType
@@ -166,7 +158,6 @@ const invokeLambda = async ({ functionName, payload, invocationType }) => {
 const start = async (event, context) => {
   const startTime = Date.now();
   try {
-    console.log("connecting to db");
     const { 
       host = 'localhost', 
       username = 'postgres', 
@@ -175,9 +166,7 @@ const start = async (event, context) => {
     db = await initDb('postgres', username, password, { host });
 
     const appList = await getAppList();
-    console.log("got app list");
     const playerCounts = await runUpdate(appList);
-    console.log("got player counts");
     await updateDatabaseCounts(playerCounts);
     await invokeLambda({
       functionName: 'dev-update-app-stats-function',
@@ -188,21 +177,23 @@ const start = async (event, context) => {
   } catch (e) {
     console.error(e);
   } finally {
-    db.sequelize.close();
-    return { statusCode: '200' };
+    await db.sequelize.close();
+    return { statusCode: 200 };
   }
 };
 
-const secrets = {};
+const fetchData = {};
 if (!process.env.IS_OFFLINE) {
-  secrets.DB_CREDENTIALS = config.DB_SECRET_NAME;
+  fetchData.DB_CREDENTIALS = config.DB_SECRET_NAME;
 }
 
 const handler = middy(start)
   .use(secretsManager({
-    cache: true,
-    region: 'us-east-1',
-    secrets
+    awsClientOptions: {
+      region: 'us-east-1'
+    },
+    fetchData,
+    setToContext: true
   }));
 
 exports.handler = handler;
