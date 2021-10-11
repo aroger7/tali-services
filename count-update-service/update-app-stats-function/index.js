@@ -30,20 +30,22 @@ const start = async (event, context) => {
     console.error(err);
   } finally {
     sequelize?.close();
-    return { statusCode: '200' };
+    return { statusCode: 200 };
   }
 }
 
-const secrets = {};
+const fetchData = {};
 if (!process.env.IS_OFFLINE) {
-  secrets.DB_CREDENTIALS = config.DB_SECRET_NAME;
+  fetchData.DB_CREDENTIALS = config.DB_SECRET_NAME;
 }
 
 const handler = middy(start)
   .use(secretsManager({
-    cache: true,
-    region: 'us-east-1',
-    secrets
+    awsClientOptions: {
+      region: 'us-east-1'
+    },
+    fetchData,
+    setToContext: true
   }));
 
 exports.handler = handler;
