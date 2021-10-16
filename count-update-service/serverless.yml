@@ -7,6 +7,7 @@ app: tally-backend
 org: aroger7
 
 frameworkVersion: '2'
+useDotenv: true
 
 provider:
   name: aws
@@ -17,6 +18,12 @@ provider:
         - 'secretsmanager:GetSecretValue'
         - 'lambda:InvokeFunction'
       Resource: '*'
+  environment:
+    ORM_LAYER_PATH: ${env:ORM_LAYER_PATH, '/opt/db'}
+    DB_SECRET_NAME: ${env:DB_SECRET_NAME, param:DB_SECRET_NAME}
+    NUM_UPDATE_LAMBDAS: ${env:NUM_UPDATE_LAMBDAS, 500}
+    REQS_PER_SECOND_MAX: ${env:REQS_PER_SECOND_MAX, 30}
+    GET_PLAYER_COUNTS_FUNCTION_NAME: ${env:GET_PLAYER_COUNTS_FUNCTION_NAME, '${sls:stage}-get-batch-counts-function'}
 
 functions:
   updatePlayerCounts:
@@ -24,10 +31,6 @@ functions:
     name: ${sls:stage}-update-player-counts-function
     memorySize: 512
     timeout: 360
-    environment:
-      ORM_LAYER_PATH: /opt/db
-      DB_SECRET_NAME: TallyDbDevCredentialsSecret
-      GET_PLAYER_COUNTS_FUNCTION_NAME: dev-get-batch-counts-function
     layers:
       - arn:aws:lambda:${opt:region, 'us-east-1'}:#{AWS::AccountId}:layer:${sls:stage}-orm-layer:latest
     # Disable for now since dev is only functional env

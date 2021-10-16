@@ -1,4 +1,5 @@
 const config = require('./config');
+console.log(config);
 
 const axios = require('axios');
 const http = require('http');
@@ -11,7 +12,7 @@ const { startOfHour } = require('date-fns');
 const insertApps = require('./insertApps');
 const insertCounts = require('./insertCounts');
 
-const initDb = require(config.ORM_LAYER_PATH);
+const initDb = require(config.aws.ormLayerPath);
 let db = null;
 
 AWS.config.update({ region: 'us-east-1' });
@@ -25,9 +26,9 @@ const agent = process.env.IS_OFFLINE || process.env.IS_LOCAL
   : new https.Agent(agentConfig);
 
 const lambdaConfig = { httpOptions: { agent } };
-if (process.env.IS_OFFLINE || process.env.IS_LOCAL) {
+if (config.environment === 'local') {
   console.log('running offline');
-  lambdaConfig.endpoint = new AWS.Endpoint(config.AWS_LAMBDA_ENDPOINT);
+  lambdaConfig.endpoint = new AWS.Endpoint(config.aws.lambdaEndpoint);
   lambdaConfig.region = 'us-east-1';
 }
 
@@ -55,8 +56,8 @@ const getAppList = async () => {
 };
 
 const getPlayerCounts = async (apps) => {
-  const groupSize = Math.ceil(apps.length / config.NUM_UPDATE_LAMBDAS);
-  let appGroups = [...Array(config.NUM_UPDATE_LAMBDAS)]
+  const groupSize = Math.ceil(apps.length / config.numUpdateLambdas);
+  let appGroups = [...Array(config.numUpdateLambdas)]
   appGroups = appGroups
     .map((appGroup, index) => apps.slice(index * groupSize, (index * groupSize) + groupSize))
     .filter(group => group && group.length > 0);
@@ -70,10 +71,10 @@ const getPlayerCounts = async (apps) => {
 
   const responses = await Promise.all(appGroups.map((appGroup) => 
     invokeLambda({
-      functionName: config.GET_PLAYER_COUNTS_FUNCTION_NAME,
+      functionName: config.aws.getPlayerCountsFunctionName,
       payload: { 
         apps: appGroup,
-        reqsPerSecond: config.REQS_PER_SECOND_MAX
+        reqsPerSecond: config.reqsPerSecondMax
       }
     })
   ));
@@ -147,7 +148,7 @@ const updateDatabaseCounts = async (playerCounts) => {
   }
 };
 
-const invokeLambda = ({ functionName, payload, invocationType = "RequestResponse" }) => {
+const invokeLambda = ({ functionName, payload, invocationType = 'RequestResponse' }) => {
   return lambda.invoke({
     FunctionName: functionName,
     Payload: JSON.stringify(payload),
@@ -183,8 +184,8 @@ const start = async (event, context) => {
 };
 
 const fetchData = {};
-if (!process.env.IS_OFFLINE) {
-  fetchData.DB_CREDENTIALS = config.DB_SECRET_NAME;
+if (config.db.secretName && config.environment !== 'local') {
+  fetchData.DB_CREDENTIALS = config.db.secretName;
 }
 
 const handler = middy(start)

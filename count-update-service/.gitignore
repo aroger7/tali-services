@@ -7,3 +7,5 @@ jspm_packages
 .serverless-offline
 
 **/config/local.js
+
+.env
