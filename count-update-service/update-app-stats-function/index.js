@@ -8,7 +8,7 @@ const updateDailyStats = require('./updateDailyStats');
 const updateMonthlyStats = require('./updateMonthlyStats');
 const updateYearlyStats = require('./updateYearlyStats');
 
-const initDb = require(config.ORM_LAYER_PATH);
+const initDb = require(config.aws.ormLayerPath);
 let db = null;
 
 const start = async (event, context) => {
@@ -35,8 +35,8 @@ const start = async (event, context) => {
 }
 
 const fetchData = {};
-if (!process.env.IS_OFFLINE) {
-  fetchData.DB_CREDENTIALS = config.DB_SECRET_NAME;
+if (config.db.secretName && config.environment !== 'local') {
+  fetchData.DB_CREDENTIALS = config.db.secretName;
 }
 
 const handler = middy(start)

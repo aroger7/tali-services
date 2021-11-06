@@ -1,12 +1,13 @@
 'use strict';
+const config = require('./config');
 const axios = require('axios');
 const getArrayChunks = require('../util/getArrayChunks');
 
 module.exports.handler = async (event, context) => {
-  const { apps, reqsPerSecond = 20 } = event;
+  const { apps } = event;
   const queued = apps.concat();
   try { 
-    const tasks = getArrayChunks(queued, reqsPerSecond)
+    const tasks = getArrayChunks(queued, config.reqsPerSecond)
       .map((appGroup, i) => new Promise((resolve) => {
         setTimeout(async () => {
           const groupCounts = await getCountsForAppGroup(appGroup);
@@ -50,9 +51,8 @@ const getPlayerCount = async (appid) => {
     });
     return count;
   } else {
-    const url = 'https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1';
     const params = { appid };
-    const res = await axios.get(url, { params, timeout: 2000 });
+    const res = await axios.get(config.steamApiUrl, { params, timeout: 2000 });
     return res.data?.response?.player_count >= 0
       ? res.data.response.player_count
       : null;
