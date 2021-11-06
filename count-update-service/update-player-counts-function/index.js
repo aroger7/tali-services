@@ -1,5 +1,4 @@
 const config = require('./config');
-console.log(config);
 
 const axios = require('axios');
 const http = require('http');
@@ -72,10 +71,7 @@ const getPlayerCounts = async (apps) => {
   const responses = await Promise.all(appGroups.map((appGroup) => 
     invokeLambda({
       functionName: config.aws.getPlayerCountsFunctionName,
-      payload: { 
-        apps: appGroup,
-        reqsPerSecond: config.reqsPerSecondMax
-      }
+      payload: { apps: appGroup }
     })
   ));
 
