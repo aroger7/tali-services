@@ -43,7 +43,7 @@ const getCountsForAppGroup = async (appGroup) => {
 };
 
 const getPlayerCount = async (appid) => {
-  if (process.env.IS_OFFLINE) {
+  if (config.environment === 'local') {
     const min = 0;
     const max = 500000;
     const count = await new Promise((resolve) => {

@@ -20,7 +20,7 @@ const updateTime = startOfHour(new Date());
 
 // Increase the max sockets so Lambda will fulfill more requests in parallel
 const agentConfig = { maxSocket: 1000 };
-const agent = process.env.IS_OFFLINE || process.env.IS_LOCAL
+const agent = config.environment === 'local'
   ? new http.Agent(agentConfig)
   : new https.Agent(agentConfig);
 
