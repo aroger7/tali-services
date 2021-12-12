@@ -33,7 +33,7 @@ module.exports.handler = async (event, context) => {
 const getCountsForAppGroup = async (appGroup) => {
   const tasks = appGroup.map(async app => {
     try {
-      const count = await getPlayerCount;
+      const count = await getPlayerCount();
       return { ...app, count };
     } catch (err) {
       return { ...app, errorStatus: err?.response?.status };
